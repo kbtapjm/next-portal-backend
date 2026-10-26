@@ -1,0 +1,3 @@
+pluginManagement { repositories { gradlePluginPortal(); mavenCentral() } }
+rootProject.name = 'next-portal-backend'
+include 'common', 'api', 'admin', 'user', 'batch'

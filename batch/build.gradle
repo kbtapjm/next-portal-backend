@@ -1,0 +1,6 @@
+plugins { id 'org.springframework.boot' }
+springBoot { mainClass = 'com.nextportal.batch.BatchApplication' }
+dependencies {
+    implementation project(':common')
+    implementation 'org.springframework.boot:spring-boot-starter-batch'
+}

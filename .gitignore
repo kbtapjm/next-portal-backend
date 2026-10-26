@@ -1,0 +1,27 @@
+# Local IDE settings and build output
+.idea/
+.vscode/
+*.iml
+.gradle/
+**/build/
+**/out/
+**/src/main/generated/
+**/src/test/generated/
+*.class
+*.log
+*.hprof
+.DS_Store
+Thumbs.db
+
+# Real local configuration and credentials stay on the developer's machine.
+/config/application-local.yml
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+
+# Keep the wrapper binary and shared run configurations.
+!gradle/wrapper/gradle-wrapper.jar

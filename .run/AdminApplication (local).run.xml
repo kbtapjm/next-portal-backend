@@ -1,0 +1,9 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="AdminApplication (local)" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <module name="next-portal-backend.admin.main" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="com.nextportal.admin.AdminApplication" />
+    <option name="PROGRAM_PARAMETERS" value="--spring.profiles.active=local" />
+    <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <method v="2"><option name="Make" enabled="true" /></method>
+  </configuration>
+</component>

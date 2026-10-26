@@ -1,0 +1,7 @@
+spring:
+  application:
+    name: portal-admin
+  config:
+    import: classpath:portal-common.yml
+server:
+  port: ${portal.ports.admin:8080}

@@ -1,0 +1,8 @@
+plugins { id 'org.springframework.boot' }
+springBoot { mainClass = 'com.nextportal.admin.AdminApplication' }
+dependencies {
+    implementation project(':api')
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
+    testRuntimeOnly 'com.h2database:h2'
+}

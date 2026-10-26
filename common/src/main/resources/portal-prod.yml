@@ -1,0 +1,23 @@
+# Activate with --spring.profiles.active=prod. Secret values have no defaults.
+spring:
+  datasource:
+    url: jdbc:mariadb://${DB_HOST}:${DB_PORT:3306}/${DB_NAME}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: ${REDIS_DATABASE:0}
+portal:
+  ports:
+    admin: ${ADMIN_PORT:8080}
+    user: ${USER_PORT:8081}
+  security:
+    secret: ${JWT_SECRET}
+    allowed-origins: ${ALLOWED_ORIGINS}
+    secure-cookie: true
+  bootstrap-admin:
+    email: ${BOOTSTRAP_ADMIN_EMAIL:}
+    password: ${BOOTSTRAP_ADMIN_PASSWORD:}

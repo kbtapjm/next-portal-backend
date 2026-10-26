@@ -1,0 +1,3 @@
+plugins { id 'org.springframework.boot' }
+springBoot { mainClass = 'com.nextportal.user.UserApplication' }
+dependencies { implementation project(':api') }

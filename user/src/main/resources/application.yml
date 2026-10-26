@@ -1,0 +1,7 @@
+spring:
+  application:
+    name: portal-user
+  config:
+    import: classpath:portal-common.yml
+server:
+  port: ${portal.ports.user:8081}

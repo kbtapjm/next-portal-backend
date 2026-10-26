@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: portal-batch
+  config:
+    import: classpath:portal-common.yml
+  main:
+    web-application-type: none
+  batch:
+    job:
+      enabled: false
+    jdbc:
+      initialize-schema: never
