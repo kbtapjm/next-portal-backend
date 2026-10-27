@@ -1,55 +1,14 @@
 package com.nextportal.admin;
 
-import com.nextportal.api.security.SessionStore;
 import com.nextportal.common.member.*;
-import jakarta.servlet.http.Cookie;
-import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import org.junit.jupiter.api.*;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
-import org.springframework.test.web.servlet.*;
-import tools.jackson.databind.ObjectMapper;
 import static org.assertj.core.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest(properties = "portal.docs.enabled=true")
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
-class AdminIntegrationTest {
-    private static final String PASSWORD = "test-password-123!";
-    private static final String ORIGIN = "http://localhost:3000";
-    @Autowired MockMvc mvc;
-    @Autowired ObjectMapper json;
-    @Autowired MemberRepository members;
-    @Autowired PasswordEncoder passwords;
-    @MockitoBean SessionStore sessions;
-    final Map<String, SessionStore.Session> state = new ConcurrentHashMap<>();
-    Member admin;
-
-    @BeforeEach void setup() {
-        members.deleteAll(); state.clear();
-        admin = members.save(new Member("admin@example.com", "관리자", passwords.encode(PASSWORD), Role.ADMIN));
-        doAnswer(call -> { state.put(call.getArgument(0), new SessionStore.Session(call.getArgument(1), call.getArgument(2), call.getArgument(3), call.getArgument(4))); return null; })
-            .when(sessions).create(anyString(), anyLong(), anyLong(), anyString(), anyString(), any(Duration.class));
-        when(sessions.find(anyString())).thenAnswer(call -> Optional.ofNullable(state.get(call.<String>getArgument(0))));
-        when(sessions.rotate(anyString(), anyString(), anyString(), anyString(), any(Duration.class))).thenAnswer(call -> {
-            var sid = call.<String>getArgument(0);
-            var previous = state.get(sid);
-            return Optional.ofNullable(previous).filter(value -> value.refreshHash().equals(call.<String>getArgument(1)))
-                .map(value -> { state.put(sid, new SessionStore.Session(value.memberId(), value.version(), call.getArgument(2), call.getArgument(3))); return true; }).orElse(false);
-        });
-        doAnswer(call -> { state.remove(call.<String>getArgument(0)); return null; }).when(sessions).delete(anyString());
-    }
+class AdminIntegrationTest extends AdminTestSupport {
 
     @Test void authenticationRotationAndLogout() throws Exception {
         mvc.perform(get("/api/admin/users")).andExpect(status().isUnauthorized());
@@ -93,6 +52,9 @@ class AdminIntegrationTest {
             .andExpect(jsonPath("$.components.securitySchemes.refreshCookie.name").value("portal_admin_refresh"))
             .andExpect(jsonPath("$.components.schemas.MemberView.properties.passwordHash").doesNotExist())
             .andExpect(jsonPath("$.components.schemas.MemberPage.properties.content").exists())
+            .andExpect(jsonPath("$.components.schemas.MemberView.properties.permissions").exists())
+            .andExpect(jsonPath("$.paths['/api/admin/roles'].post.operationId").value("createRole"))
+            .andExpect(jsonPath("$.paths['/api/admin/users/{id}/roles'].put.operationId").value("assignUserRoles"))
             .andExpect(jsonPath("$.components.schemas.CreateUser.properties.password.writeOnly").value(true));
     }
 
@@ -130,20 +92,14 @@ class AdminIntegrationTest {
         var signedIn = signIn();
         var token = token(signedIn);
         var member = members.findById(admin.getId()).orElseThrow();
-        member.update(member.getName(), Role.ADMIN, MemberStatus.DISABLED);
+        member.update(member.getName(), MemberStatus.DISABLED);
         members.saveAndFlush(member);
         mvc.perform(get("/api/admin/users").header("Authorization", "Bearer " + token)).andExpect(status().isUnauthorized());
         mvc.perform(post("/api/admin/auth/refresh").header("Origin", ORIGIN)
             .cookie(signedIn.getResponse().getCookie("portal_admin_refresh"))).andExpect(status().isUnauthorized());
-        members.save(new Member("user@example.com", "사용자", passwords.encode(PASSWORD), Role.USER));
+        member("user@example.com", "USER");
         mvc.perform(post("/api/admin/auth/login").header("Origin", ORIGIN).contentType(MediaType.APPLICATION_JSON)
             .content(loginBody("user@example.com", PASSWORD))).andExpect(status().isUnauthorized());
     }
 
-    private MvcResult signIn() throws Exception {
-        return mvc.perform(post("/api/admin/auth/login").header("Origin", ORIGIN).contentType(MediaType.APPLICATION_JSON)
-            .content(loginBody("admin@example.com", PASSWORD))).andExpect(status().isOk()).andReturn();
-    }
-    private String loginBody(String email, String password) throws Exception { return json.writeValueAsString(Map.of("email", email, "password", password)); }
-    private String token(MvcResult result) throws Exception { return json.readTree(result.getResponse().getContentAsString()).get("accessToken").asText(); }
 }

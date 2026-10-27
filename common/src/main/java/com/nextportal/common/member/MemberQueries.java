@@ -14,13 +14,16 @@ public class MemberQueries {
     private final JPAQueryFactory query;
     public MemberQueries(EntityManager entityManager) { query = new JPAQueryFactory(entityManager); }
 
-    public Page<Member> search(String keyword, Role role, MemberStatus status, int page, int size) {
+    public Page<Member> search(String keyword, Role role, String roleCode, MemberStatus status, int page, int size) {
         var member = QMember.member;
         var where = new BooleanBuilder();
         Optional.ofNullable(keyword).map(String::strip).filter(value -> !value.isBlank())
             .ifPresent(value -> where.and(member.email.containsIgnoreCase(value)
                 .or(member.name.containsIgnoreCase(value))));
-        Optional.ofNullable(role).ifPresent(value -> where.and(member.role.eq(value)));
+        Optional.ofNullable(role).ifPresent(value -> where.and(value == Role.ADMIN
+            ? member.roles.any().permissions.any().code.eq("admin:access")
+            : member.roles.any().permissions.any().code.eq("admin:access").not()));
+        Optional.ofNullable(roleCode).ifPresent(value -> where.and(member.roles.any().code.eq(value)));
         Optional.ofNullable(status).ifPresent(value -> where.and(member.status.eq(value)));
         var pageable = PageRequest.of(page, size);
         var rows = query.selectFrom(member).where(where).orderBy(member.id.desc())

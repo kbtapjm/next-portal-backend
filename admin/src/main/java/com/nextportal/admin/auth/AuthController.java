@@ -37,7 +37,7 @@ public class AuthController {
     private final AuthService auth;
     private final MemberService members;
     private final SecurityProperties properties;
-    @Operation(operationId = "adminLogin", summary = "관리자 로그인", description = "활성 ADMIN 계정만 로그인할 수 있습니다. "
+    @Operation(operationId = "adminLogin", summary = "관리자 로그인", description = "활성 계정 중 admin:access 권한 보유 계정만 로그인할 수 있습니다. "
         + "Origin은 허용 출처와 일치해야 하며 브라우저가 실제 출처로 설정합니다. Swagger에서는 현재 서버 출처를 사용하세요. "
         + "Refresh 쿠키가 자동 저장되며 응답의 accessToken으로 Authorize를 설정합니다.")
     @ApiResponse(responseCode = "200", description = "Access JWT 발급 및 Refresh 쿠키 저장",
@@ -71,9 +71,9 @@ public class AuthController {
         auth.logout(jwt.getClaimAsString("sid"));
         return ResponseEntity.noContent().header(HttpHeaders.SET_COOKIE, cookie("", Duration.ZERO).toString()).build();
     }
-    @Operation(operationId = "adminMe", summary = "현재 관리자 조회", security = @SecurityRequirement(name = "bearerAuth"))
+    @Operation(operationId = "adminMe", summary = "현재 관리자 및 권한 조회", description = "roles는 부여된 역할, permissions는 합산된 세부 권한입니다. user:read 없이 자신의 정보만 조회할 수 있습니다.", security = @SecurityRequirement(name = "bearerAuth"))
     @ApiResponse(responseCode = "200", description = "현재 관리자 정보", content = @Content(mediaType = "application/json", schema = @Schema(implementation = View.class)))
-    @GetMapping("/me") View me(@Parameter(hidden = true) @AuthenticationPrincipal Jwt jwt) { return members.get(Long.parseLong(jwt.getSubject())); }
+    @GetMapping("/me") View me() { return members.current(); }
     private ResponseEntity<TokenView> issued(AuthService.Issued issued) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
             .header(HttpHeaders.SET_COOKIE, cookie(issued.refreshCookie(), properties.refreshTtl()).toString())

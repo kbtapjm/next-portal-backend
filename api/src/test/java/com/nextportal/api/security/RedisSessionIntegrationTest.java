@@ -19,7 +19,7 @@ class RedisSessionIntegrationTest {
         var store = new SessionStore(template);
         var sid = "test-" + UUID.randomUUID();
         try {
-            store.create(sid, 1, 0, "old-refresh-hash", "old-jti", Duration.ofMinutes(1));
+            store.create(sid, 1, 0, "role-policy-version", "old-refresh-hash", "old-jti", Duration.ofMinutes(1));
             assertThat(template.getExpire("next-portal:session:" + sid)).isBetween(1L, 60L);
             assertThat(store.find(sid)).isPresent();
             try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
@@ -30,6 +30,7 @@ class RedisSessionIntegrationTest {
                 assertThat(successes).isEqualTo(1);
             }
             assertThat(store.find(sid).orElseThrow().accessId()).isEqualTo("next-jti");
+            assertThat(store.find(sid).orElseThrow().authorizationVersion()).isEqualTo("role-policy-version");
             store.delete(sid);
             assertThat(store.find(sid)).isEmpty();
         } finally { store.delete(sid); connection.destroy(); }

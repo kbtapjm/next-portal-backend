@@ -18,12 +18,12 @@ public class JwtTokens {
     private final JwtEncoder encoder;
     private final SecurityProperties properties;
 
-    public String access(Member member, String sid, String jti) {
+    public String access(Member member, PortalAuthorization.Snapshot authorization, String sid, String jti) {
         var now = Instant.now();
         var claims = JwtClaimsSet.builder().issuer(properties.issuer()).subject(member.getId().toString())
             .issuedAt(now).expiresAt(now.plus(properties.accessTtl())).id(jti)
             .audience(java.util.List.of("next-portal"))
-            .claim("sid", sid).claim("ver", member.getAuthVersion()).claim("role", member.getRole().name()).build();
+            .claim("sid", sid).claim("ver", member.getAuthVersion()).claim("authz", authorization.version()).build();
         return encoder.encode(JwtEncoderParameters.from(JwsHeader.with(MacAlgorithm.HS256).build(), claims)).getTokenValue();
     }
     public static String randomToken() { return UUID.randomUUID().toString() + UUID.randomUUID(); }

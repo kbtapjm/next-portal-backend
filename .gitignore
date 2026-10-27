@@ -15,6 +15,7 @@ Thumbs.db
 
 # Real local configuration and credentials stay on the developer's machine.
 /config/application-local.yml
+/.local-backups/
 .env
 .env.*
 *.pem

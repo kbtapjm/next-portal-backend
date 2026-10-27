@@ -13,12 +13,16 @@
   ],
   "tags": [
     {
-      "name": "01. 관리자 인증",
-      "description": "관리자 로그인, 내 정보, 토큰 갱신과 로그아웃"
+      "name": "03. 역할·권한 관리",
+      "description": "역할에 세부 권한을 묶고 사용자에게 여러 역할을 부여합니다. 기본 접근에는 admin:access가 필요합니다."
     },
     {
       "name": "02. 사용자 관리",
-      "description": "ADMIN 권한으로 사용자와 관리자의 계정을 관리합니다."
+      "description": "조회 user:read, 생성·수정 user:write. 역할 부여와 권한 관리자 수정에는 role:manage도 필요합니다."
+    },
+    {
+      "name": "01. 관리자 인증",
+      "description": "관리자 로그인, 내 정보, 토큰 갱신과 로그아웃"
     }
   ],
   "paths": {
@@ -28,6 +32,7 @@
           "02. 사용자 관리"
         ],
         "summary": "사용자 조회",
+        "description": "user:read 필요.",
         "operationId": "getUser",
         "parameters": [
           {
@@ -76,7 +81,7 @@
             "description": "유효한 Access JWT 필요"
           },
           "403": {
-            "description": "관리자 권한 없음"
+            "description": "admin:access 또는 해당 작업의 세부 권한 없음"
           }
         },
         "security": [
@@ -90,7 +95,7 @@
           "02. 사용자 관리"
         ],
         "summary": "사용자 정보 수정",
-        "description": "이름·역할·상태를 수정합니다. 본인의 관리자 권한 해제·비활성화는 거부됩니다. 역할·상태 변경 시 해당 계정의 기존 Access·Refresh가 무효화됩니다.",
+        "description": "user:write 필요. 역할 변경 또는 role:manage 보유 계정 수정에는 role:manage도 필요합니다. 본인 역할 변경·비활성화, 마지막 활성 ADMIN 해제는 거부됩니다. 역할·상태 변경 시 기존 Access·Refresh가 무효화됩니다.",
         "operationId": "updateUser",
         "parameters": [
           {
@@ -159,7 +164,313 @@
             "description": "유효한 Access JWT 필요"
           },
           "403": {
-            "description": "관리자 권한 없음"
+            "description": "admin:access 또는 해당 작업의 세부 권한 없음"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/users/{id}/roles": {
+      "put": {
+        "tags": [
+          "03. 역할·권한 관리"
+        ],
+        "summary": "사용자 역할 전체 교체",
+        "description": "role:manage 필요. 역할 변경 시 해당 사용자의 기존 Access·Refresh가 무효화됩니다. 본인 역할 변경, 빈 역할 목록, 마지막 활성 ADMIN 해제는 거부합니다.",
+        "operationId": "assignUserRoles",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "exclusiveMinimum": 0
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignRoles"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "입력값 또는 역할·권한 코드 오류",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT 또는 세션 만료. 권한 변경 후에는 다시 로그인해야 합니다."
+          },
+          "403": {
+            "description": "필요한 세부 권한 없음"
+          },
+          "404": {
+            "description": "역할 또는 사용자 없음",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "중복 코드, 시스템 역할 수정, 부여 중인 역할 삭제, 본인 역할 변경 또는 마지막 ADMIN 해제",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "역할이 변경된 사용자",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberView"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/roles/{code}": {
+      "get": {
+        "tags": [
+          "03. 역할·권한 관리"
+        ],
+        "summary": "역할 상세 조회",
+        "description": "role:read 필요.",
+        "operationId": "getRole",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "[A-Z][A-Z0-9_]{0,49}"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "입력값 또는 역할·권한 코드 오류",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT 또는 세션 만료. 권한 변경 후에는 다시 로그인해야 합니다."
+          },
+          "403": {
+            "description": "필요한 세부 권한 없음"
+          },
+          "404": {
+            "description": "역할 또는 사용자 없음",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "중복 코드, 시스템 역할 수정, 부여 중인 역할 삭제, 본인 역할 변경 또는 마지막 ADMIN 해제",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "역할 정보",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleView"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "03. 역할·권한 관리"
+        ],
+        "summary": "역할 이름·권한 교체",
+        "description": "role:manage 필요. 권한 변경 시 해당 역할의 모든 기존 Access·Refresh가 무효화됩니다. 본인에게 부여된 역할의 권한 변경은 거부합니다.",
+        "operationId": "updateRole",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "[A-Z][A-Z0-9_]{0,49}"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRole"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "입력값 또는 역할·권한 코드 오류",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT 또는 세션 만료. 권한 변경 후에는 다시 로그인해야 합니다."
+          },
+          "403": {
+            "description": "필요한 세부 권한 없음"
+          },
+          "404": {
+            "description": "역할 또는 사용자 없음",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "중복 코드, 시스템 역할 수정, 부여 중인 역할 삭제, 본인 역할 변경 또는 마지막 ADMIN 해제",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "수정된 역할",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleView"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "03. 역할·권한 관리"
+        ],
+        "summary": "역할 삭제",
+        "description": "role:manage 필요. 시스템 역할과 사용자에게 부여된 역할은 삭제할 수 없습니다.",
+        "operationId": "deleteRole",
+        "parameters": [
+          {
+            "name": "code",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "[A-Z][A-Z0-9_]{0,49}"
+            }
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "입력값 또는 역할·권한 코드 오류",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT 또는 세션 만료. 권한 변경 후에는 다시 로그인해야 합니다."
+          },
+          "403": {
+            "description": "필요한 세부 권한 없음"
+          },
+          "404": {
+            "description": "역할 또는 사용자 없음",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "중복 코드, 시스템 역할 수정, 부여 중인 역할 삭제, 본인 역할 변경 또는 마지막 ADMIN 해제",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "삭제 완료"
           }
         },
         "security": [
@@ -175,7 +486,7 @@
           "02. 사용자 관리"
         ],
         "summary": "사용자 목록 검색",
-        "description": "이름·이메일 부분 검색, 역할·상태 필터를 지원합니다. 최신 등록순이며 페이지 번호는 0부터 시작합니다.",
+        "description": "user:read 필요. 이름·이메일 부분 검색, 역할·상태 필터를 지원합니다. roleCode는 실제 역할 코드, role은 호환용 관리자 접근 여부 분류입니다. 최신 등록순, 페이지 번호는 0부터 시작합니다.",
         "operationId": "searchUsers",
         "parameters": [
           {
@@ -194,12 +505,22 @@
             "name": "role",
             "in": "query",
             "required": false,
+            "deprecated": true,
             "schema": {
               "type": "string",
               "enum": [
                 "ADMIN",
                 "USER"
               ]
+            }
+          },
+          {
+            "name": "roleCode",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "[A-Z][A-Z0-9_]{0,49}"
             }
           },
           {
@@ -253,7 +574,7 @@
             "description": "유효한 Access JWT 필요"
           },
           "403": {
-            "description": "관리자 권한 없음"
+            "description": "admin:access 또는 해당 작업의 세부 권한 없음"
           },
           "200": {
             "description": "사용자 검색 결과",
@@ -277,7 +598,7 @@
           "02. 사용자 관리"
         ],
         "summary": "사용자 등록",
-        "description": "USER 또는 ADMIN 계정을 생성합니다. 이메일은 공백 제거 후 소문자로 저장합니다. 비밀번호는 12자 이상, UTF-8 72바이트 이하입니다.",
+        "description": "user:write 필요. roles 생략 시 USER. USER 이외 역할 부여에는 role:manage도 필요합니다. 이메일은 소문자 정규화, 비밀번호는 12자 이상 UTF-8 72바이트 이하입니다.",
         "operationId": "createUser",
         "requestBody": {
           "content": {
@@ -324,7 +645,144 @@
             "description": "유효한 Access JWT 필요"
           },
           "403": {
-            "description": "관리자 권한 없음"
+            "description": "admin:access 또는 해당 작업의 세부 권한 없음"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/roles": {
+      "get": {
+        "tags": [
+          "03. 역할·권한 관리"
+        ],
+        "summary": "역할 목록 조회",
+        "description": "role:read 필요.",
+        "operationId": "listRoles",
+        "responses": {
+          "400": {
+            "description": "입력값 또는 역할·권한 코드 오류",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT 또는 세션 만료. 권한 변경 후에는 다시 로그인해야 합니다."
+          },
+          "403": {
+            "description": "필요한 세부 권한 없음"
+          },
+          "404": {
+            "description": "역할 또는 사용자 없음",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "중복 코드, 시스템 역할 수정, 부여 중인 역할 삭제, 본인 역할 변경 또는 마지막 ADMIN 해제",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "역할 목록",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RoleView"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "03. 역할·권한 관리"
+        ],
+        "summary": "역할 생성",
+        "description": "role:manage 필요. 알려진 권한 코드만 부여할 수 있습니다.",
+        "operationId": "createRole",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRole"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "입력값 또는 역할·권한 코드 오류",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT 또는 세션 만료. 권한 변경 후에는 다시 로그인해야 합니다."
+          },
+          "403": {
+            "description": "필요한 세부 권한 없음"
+          },
+          "404": {
+            "description": "역할 또는 사용자 없음",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "중복 코드, 시스템 역할 수정, 부여 중인 역할 삭제, 본인 역할 변경 또는 마지막 ADMIN 해제",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "201": {
+            "description": "역할 생성 완료",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleView"
+                }
+              }
+            }
           }
         },
         "security": [
@@ -431,7 +889,7 @@
           "01. 관리자 인증"
         ],
         "summary": "관리자 로그인",
-        "description": "활성 ADMIN 계정만 로그인할 수 있습니다. Origin은 허용 출처와 일치해야 하며 브라우저가 실제 출처로 설정합니다. Swagger에서는 현재 서버 출처를 사용하세요. Refresh 쿠키가 자동 저장되며 응답의 accessToken으로 Authorize를 설정합니다.",
+        "description": "활성 계정 중 admin:access 권한 보유 계정만 로그인할 수 있습니다. Origin은 허용 출처와 일치해야 하며 브라우저가 실제 출처로 설정합니다. Swagger에서는 현재 서버 출처를 사용하세요. Refresh 쿠키가 자동 저장되며 응답의 accessToken으로 Authorize를 설정합니다.",
         "operationId": "adminLogin",
         "parameters": [
           {
@@ -501,12 +959,79 @@
         }
       }
     },
+    "/api/admin/permissions": {
+      "get": {
+        "tags": [
+          "03. 역할·권한 관리"
+        ],
+        "summary": "권한 카탈로그 조회",
+        "description": "role:read 필요. 권한 코드는 실제 API 정책과 함께 마이그레이션으로 관리합니다.",
+        "operationId": "listPermissions",
+        "responses": {
+          "400": {
+            "description": "입력값 또는 역할·권한 코드 오류",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "JWT 또는 세션 만료. 권한 변경 후에는 다시 로그인해야 합니다."
+          },
+          "403": {
+            "description": "필요한 세부 권한 없음"
+          },
+          "404": {
+            "description": "역할 또는 사용자 없음",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "중복 코드, 시스템 역할 수정, 부여 중인 역할 삭제, 본인 역할 변경 또는 마지막 ADMIN 해제",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "권한 목록",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PermissionView"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
     "/api/admin/auth/me": {
       "get": {
         "tags": [
           "01. 관리자 인증"
         ],
-        "summary": "현재 관리자 조회",
+        "summary": "현재 관리자 및 권한 조회",
+        "description": "roles는 부여된 역할, permissions는 합산된 세부 권한입니다. user:read 없이 자신의 정보만 조회할 수 있습니다.",
         "operationId": "adminMe",
         "responses": {
           "400": {
@@ -549,6 +1074,13 @@
       "UpdateUser": {
         "type": "object",
         "description": "사용자 이름·역할·상태 수정",
+        "example": {
+          "name": "홍길동",
+          "status": "ACTIVE",
+          "roles": [
+            "USER_VIEWER"
+          ]
+        },
         "properties": {
           "name": {
             "type": "string",
@@ -558,6 +1090,8 @@
           },
           "role": {
             "type": "string",
+            "deprecated": true,
+            "description": "호환용 ADMIN/USER 분류. 현재 분류와 같으면 기존 역할 유지. roles와 동시 지정 불가.",
             "enum": [
               "ADMIN",
               "USER"
@@ -571,11 +1105,25 @@
               "DISABLED"
             ],
             "example": "ACTIVE"
+          },
+          "roles": {
+            "type": "array",
+            "description": "역할 전체 교체. 생략 시 유지. 변경에는 role:manage가 필요합니다.",
+            "example": [
+              "USER_VIEWER"
+            ],
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "[A-Z][A-Z0-9_]{0,49}"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "uniqueItems": true
           }
         },
         "required": [
           "name",
-          "role",
           "status"
         ]
       },
@@ -598,6 +1146,8 @@
           },
           "role": {
             "type": "string",
+            "deprecated": true,
+            "description": "호환용 분류. admin:access 보유 시 ADMIN, 그 외 USER. 실제 역할은 roles를 사용하세요.",
             "enum": [
               "ADMIN",
               "USER"
@@ -613,6 +1163,18 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -643,9 +1205,96 @@
           }
         }
       },
+      "AssignRoles": {
+        "type": "object",
+        "description": "사용자의 역할 전체 교체. 빈 역할 목록과 본인 역할 변경은 허용하지 않습니다.",
+        "properties": {
+          "roles": {
+            "type": "array",
+            "example": [
+              "USER_VIEWER"
+            ],
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "[A-Z][A-Z0-9_]{0,49}"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "roles"
+        ]
+      },
+      "UpdateRole": {
+        "type": "object",
+        "description": "이름과 권한 전체 교체. 권한이 달라지면 부여된 모든 계정의 기존 Access·Refresh가 무효화됩니다.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "감사 담당자",
+            "maxLength": 100,
+            "minLength": 0
+          },
+          "permissions": {
+            "type": "array",
+            "example": [
+              "admin:access",
+              "user:read"
+            ],
+            "items": {
+              "type": "string",
+              "maxLength": 80,
+              "minLength": 0
+            },
+            "maxItems": 100,
+            "minItems": 0,
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "name",
+          "permissions"
+        ]
+      },
+      "RoleView": {
+        "type": "object",
+        "description": "역할과 세부 권한. ADMIN·USER 시스템 역할은 변경·삭제할 수 없습니다.",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "system": {
+            "type": "boolean"
+          },
+          "permissionRevision": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "CreateUser": {
         "type": "object",
         "description": "사용자 등록 요청",
+        "example": {
+          "email": "user@example.com",
+          "name": "홍길동",
+          "password": "example-password-123!",
+          "roles": [
+            "USER"
+          ]
+        },
         "properties": {
           "email": {
             "type": "string",
@@ -672,18 +1321,71 @@
           },
           "role": {
             "type": "string",
+            "deprecated": true,
+            "description": "기존 클라이언트 호환용. roles와 동시 지정할 수 없습니다.",
             "enum": [
               "ADMIN",
               "USER"
             ],
             "example": "USER"
+          },
+          "roles": {
+            "type": "array",
+            "description": "부여할 역할 코드. 미지정 시 USER. role과 동시 지정할 수 없습니다.",
+            "example": [
+              "USER"
+            ],
+            "items": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "[A-Z][A-Z0-9_]{0,49}"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "uniqueItems": true
           }
         },
         "required": [
           "email",
           "name",
-          "password",
-          "role"
+          "password"
+        ]
+      },
+      "CreateRole": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "example": "AUDITOR",
+            "minLength": 1,
+            "pattern": "[A-Z][A-Z0-9_]{0,49}"
+          },
+          "name": {
+            "type": "string",
+            "example": "감사 담당자",
+            "maxLength": 100,
+            "minLength": 0
+          },
+          "permissions": {
+            "type": "array",
+            "example": [
+              "admin:access",
+              "user:read"
+            ],
+            "items": {
+              "type": "string",
+              "maxLength": 80,
+              "minLength": 0
+            },
+            "maxItems": 100,
+            "minItems": 0,
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "permissions"
         ]
       },
       "Token": {
@@ -757,6 +1459,18 @@
           "totalPages": {
             "type": "integer",
             "format": "int32"
+          }
+        }
+      },
+      "PermissionView": {
+        "type": "object",
+        "description": "API에서 검사하는 고정 권한 카탈로그. 권한 추가는 코드와 DB 마이그레이션으로 수행합니다.",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
           }
         }
       }

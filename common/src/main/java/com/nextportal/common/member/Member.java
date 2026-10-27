@@ -1,11 +1,14 @@
 package com.nextportal.common.member;
 
 import jakarta.persistence.*;
+import com.nextportal.common.authorization.PortalRole;
 import java.time.Instant;
-import java.util.Locale;
+import java.util.*;
+import java.util.stream.Collectors;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.BatchSize;
 
 @Entity
 @Table(name = "portal_member")
@@ -23,9 +26,11 @@ public class Member {
     @Getter
     @Column(nullable = false, length = 100)
     private String passwordHash;
-    @Getter
-    @Enumerated(EnumType.STRING) @Column(nullable = false, length = 20)
-    private Role role;
+    @ManyToMany
+    @JoinTable(name = "portal_member_role",
+        joinColumns = @JoinColumn(name = "member_id"), inverseJoinColumns = @JoinColumn(name = "role_code"))
+    @BatchSize(size = 50)
+    private Set<PortalRole> roles = new HashSet<>();
     @Getter
     @Enumerated(EnumType.STRING) @Column(nullable = false, length = 20)
     private MemberStatus status;
@@ -38,21 +43,35 @@ public class Member {
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
 
-    public Member(String email, String name, String passwordHash, Role role) {
+    public Member(String email, String name, String passwordHash, Collection<PortalRole> roles) {
         this.email = normalizeEmail(email);
         this.name = name.strip();
         this.passwordHash = passwordHash;
-        this.role = role;
+        this.roles.addAll(roles);
         this.status = MemberStatus.ACTIVE;
         this.createdAt = Instant.now();
     }
 
     public static String normalizeEmail(String email) { return email.strip().toLowerCase(Locale.ROOT); }
 
-    public void update(String name, Role role, MemberStatus status) {
-        this.authVersion += (this.role != role || this.status != status) ? 1 : 0;
+    public Set<PortalRole> getRoles() { return Set.copyOf(roles); }
+    public List<String> roleCodes() { return roles.stream().map(PortalRole::getCode).sorted().toList(); }
+    public List<String> permissionCodes() {
+        return roles.stream().flatMap(role -> role.getPermissions().stream()).map(permission -> permission.getCode()).distinct().sorted().toList();
+    }
+    // Compatibility for the original frontend. Authorization never uses this two-value projection.
+    public Role getRole() { return roles.stream().anyMatch(role -> role.hasPermission("admin:access")) ? Role.ADMIN : Role.USER; }
+
+    public void update(String name, MemberStatus status) {
+        this.authVersion += this.status != status ? 1 : 0;
         this.name = name.strip();
-        this.role = role;
         this.status = status;
+    }
+
+    public void replaceRoles(Collection<PortalRole> replacement) {
+        var codes = replacement.stream().map(PortalRole::getCode).collect(Collectors.toSet());
+        this.authVersion += new HashSet<>(roleCodes()).equals(codes) ? 0 : 1;
+        this.roles.clear();
+        this.roles.addAll(replacement);
     }
 }

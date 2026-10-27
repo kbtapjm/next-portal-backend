@@ -21,6 +21,7 @@ public class AuthService {
     private final SessionStore sessions;
     private final JwtTokens tokens;
     private final SecurityProperties properties;
+    private final PortalAuthorization authorization;
     private String dummyHash;
 
     @PostConstruct
@@ -32,12 +33,13 @@ public class AuthService {
         var candidate = members.findByEmail(Member.normalizeEmail(email));
         var matches = password.getBytes(StandardCharsets.UTF_8).length <= 72
             && passwords.matches(password, candidate.map(Member::getPasswordHash).orElse(dummyHash));
-        var member = candidate.filter(value -> matches).filter(AuthService::isAdmin).orElseThrow(AuthService::unauthorized);
+        var member = candidate.filter(value -> matches).filter(value -> value.getStatus() == MemberStatus.ACTIVE).orElseThrow(AuthService::unauthorized);
+        var grants = requireAdmin(member);
         var sid = UUID.randomUUID().toString();
         var refresh = JwtTokens.randomToken();
         var jti = UUID.randomUUID().toString();
-        var access = tokens.access(member, sid, jti);
-        sessions.create(sid, member.getId(), member.getAuthVersion(), JwtTokens.digest(refresh), jti, properties.refreshTtl());
+        var access = tokens.access(member, grants, sid, jti);
+        sessions.create(sid, member.getId(), member.getAuthVersion(), grants.version(), JwtTokens.digest(refresh), jti, properties.refreshTtl());
         return new Issued(access, properties.accessTtl().toSeconds(), sid + "." + refresh);
     }
     public Issued refresh(String cookie) {
@@ -46,17 +48,22 @@ public class AuthService {
         var sid = parts[0];
         var previous = JwtTokens.digest(parts[1]);
         var session = sessions.find(sid).filter(value -> value.refreshHash().equals(previous)).orElseThrow(AuthService::unauthorized);
-        var member = members.findById(session.memberId()).filter(AuthService::isAdmin)
+        var member = members.findById(session.memberId()).filter(value -> value.getStatus() == MemberStatus.ACTIVE)
             .filter(value -> value.getAuthVersion() == session.version()).orElseThrow(AuthService::unauthorized);
+        var grants = requireAdmin(member);
+        Optional.of(grants.version()).filter(session.authorizationVersion()::equals).orElseThrow(AuthService::unauthorized);
         var refresh = JwtTokens.randomToken();
         var jti = UUID.randomUUID().toString();
-        var access = tokens.access(member, sid, jti);
+        var access = tokens.access(member, grants, sid, jti);
         Optional.of(sessions.rotate(sid, previous, JwtTokens.digest(refresh), jti, properties.refreshTtl()))
             .filter(Boolean::booleanValue).orElseThrow(AuthService::unauthorized);
         return new Issued(access, properties.accessTtl().toSeconds(), sid + "." + refresh);
     }
     public void logout(String sid) { sessions.delete(sid); }
-    private static boolean isAdmin(Member member) { return member.getRole() == Role.ADMIN && member.getStatus() == MemberStatus.ACTIVE; }
+    private PortalAuthorization.Snapshot requireAdmin(Member member) {
+        return Optional.of(authorization.forMember(member.getId())).filter(PortalAuthorization.Snapshot::canAccessAdmin)
+            .orElseThrow(AuthService::unauthorized);
+    }
     private static PortalException unauthorized() { return new PortalException(HttpStatus.UNAUTHORIZED, "인증 정보가 올바르지 않습니다."); }
     public record Issued(String accessToken, long expiresIn, String refreshCookie) {
         @Override public String toString() { return "Issued[REDACTED]"; }

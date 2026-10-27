@@ -8,6 +8,7 @@
 - Java 21 / Spring Boot 4.1.2 / Gradle Wrapper
 - Spring Data JPA / OpenFeign Querydsl 7.1 / Flyway / MariaDB
 - Spring Security / JWT / Redis 세션과 Refresh 토큰 회전
+- RBAC / 사용자 다중 역할 / 세부 Permission 기반 서비스 인가
 - springdoc-openapi 3.2.0 / Swagger UI: 로컬 API 문서와 직접 호출
 - DTO·설정은 Record, 단순 주입 생성자·Entity getter는 Lombok으로 생성
 
@@ -156,14 +157,31 @@ java -jar admin/build/libs/admin-0.1.0-SNAPSHOT.jar --spring.profiles.active=pro
 - BCrypt(12), 이메일 소문자 정규화, 입력 검증, 유일성 제약, 낙관적 잠금
 - 자기 계정의 관리자 권한 해제·비활성화 차단
 
+### 역할과 세부 권한
+
+사용자는 여러 역할을 가질 수 있고, 역할에 부여된 세부 권한의 합집합으로 접근을
+판정합니다. `ADMIN`, `USER`, `USER_VIEWER`, `USER_MANAGER` 역할을 기본 제공합니다.
+관리자 로그인에는 `admin:access`, 사용자 조회에는 `user:read`, 수정에는 `user:write`,
+역할 관리에는 `role:manage`가 필요합니다. 역할·권한 조회에는 `role:read`가 필요합니다.
+
+Swagger의 **역할·권한 관리**에서 역할 생성·수정·삭제, 권한 카탈로그 조회,
+사용자 역할 부여를 실행할 수 있습니다. `/api/admin/auth/me`는 현재 사용자의
+`roles`와 `permissions`를 반환합니다. 역할·권한 변경 시 기존 Access·Refresh를
+거부하므로 다시 로그인해야 합니다. ADMIN·USER 시스템 역할과 마지막 활성 ADMIN을 보호합니다.
+
+기존 프론트의 `role: ADMIN/USER` 계약은 호환용으로 유지합니다. 새 API에서는
+`roles` 배열을 사용하세요. 상세 테이블 구조, 요청 예시, 권한별 API와 마이그레이션
+주의사항은 [역할과 세부 권한](docs/authorization.md)을 참고하세요.
+
 Access JWT는 기본 15분, Refresh 세션은 7일입니다. Redis에는 Access의 JTI, Refresh의
-SHA-256 해시, 사용자 ID·인증 버전을 TTL과 함께 저장합니다. Refresh는 Lua로 원자적으로
+SHA-256 해시, 사용자 ID·인증 버전·역할 권한 버전 지문을 TTL과 함께 저장합니다. Refresh는 Lua로 원자적으로
 회전하고, 갱신 시 이전 Access도 거부합니다. 로그아웃과 계정 역할·상태 변경은 기존 세션의
 접근을 차단합니다. Refresh 토큰은 HttpOnly / SameSite=Strict 쿠키로 전달합니다.
 
 로그인·Refresh API에는 허용 목록과 일치하는 `Origin` 헤더가 필요합니다. 로컬 기본값은
-`http://localhost:3000`, `http://localhost:3001`입니다. 나머지 관리자 API는 Bearer JWT와
-ADMIN 권한을 요구합니다. Redis 키는 `next-portal:session:{sid}` 형식입니다.
+`http://localhost:3000`, `http://localhost:3001` 및 현재 Swagger 서버 출처입니다.
+나머지 관리자 API는 Bearer JWT, `admin:access`와 작업별 세부 권한을 요구합니다.
+Redis 키는 `next-portal:session:{sid}` 형식입니다.
 
 사용자 회원가입·로그인·데이터 검색, 실제 Batch Job과 메타데이터 DDL, 로그인 시도 제한,
 비밀번호 재설정·감사 로그는 아직 구현하지 않았습니다.
