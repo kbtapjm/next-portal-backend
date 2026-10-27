@@ -11,4 +11,4 @@ spring:
 portal:
   security:
     secret: test-only-secret-that-is-longer-than-thirty-two-bytes
-    allowed-origins: http://localhost:3000
+    allowed-origins: http://localhost:3000,http://localhost:8080

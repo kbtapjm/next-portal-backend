@@ -8,6 +8,7 @@
 - Java 21 / Spring Boot 4.1.2 / Gradle Wrapper
 - Spring Data JPA / OpenFeign Querydsl 7.1 / Flyway / MariaDB
 - Spring Security / JWT / Redis 세션과 Refresh 토큰 회전
+- springdoc-openapi 3.2.0 / Swagger UI: 로컬 API 문서와 직접 호출
 - DTO·설정은 Record, 단순 주입 생성자·Entity getter는 Lombok으로 생성
 
 ## 모듈과 폴더
@@ -34,7 +35,7 @@ batch ────────────→ common
 - `.run`: IntelliJ 실행 설정
 - `gradle`: Gradle Wrapper 파일
 - `.gradle`, `build`, `out`, `src/main/generated`: 캐시·빌드·자동 생성 결과. Git 제외
-- `docs/openapi.json`: 관리자 API 계약
+- `docs/openapi.json`, `docs/openapi-user.json`: 코드에서 생성해 내보낸 관리자·사용자 OpenAPI 명세
 
 프론트엔드는 이 저장소에 포함하지 않습니다.
 
@@ -76,6 +77,51 @@ IntelliJ에서는 이 저장소 루트를 Gradle 프로젝트로 열고 Java 21�
 동기화하세요. `.run`의 `(local)` 실행 설정을 사용하거나 Working directory를 저장소 루트로
 맞춰 main 메서드를 실행하면 됩니다. `bootRun`의 작업 디렉터리도 저장소 루트로 고정했습니다.
 실제 로컬 YAML은 실행 JAR에 포함되지 않습니다.
+
+## Swagger UI로 API 확인하기
+
+`local` 프로필에서 관리자·사용자 서버의 Swagger UI와 OpenAPI 명세를 활성화합니다.
+`prod`와 기본 공통 설정에서는 문서·명세를 비활성화하고 문서 경로의 접근을 차단합니다.
+
+| 서버 | 화면 | OpenAPI JSON |
+|---|---|---|
+| 관리자, 기본 8080 | `http://localhost:8080/swagger-ui/index.html` | `http://localhost:8080/v3/api-docs` |
+| 사용자, 기본 8081 | `http://localhost:8081/swagger-ui/index.html` | `http://localhost:8081/v3/api-docs` |
+
+로컬 YAML에서 포트를 변경했다면 해당 포트를 사용하세요. `/swagger-ui.html`로 접속해도
+화면으로 이동합니다. 프론트엔드 서버는 실행하지 않아도 됩니다.
+
+관리자 문서는 **관리자 인증 / 사용자 관리** 태그로 나뉘며 요청 필드, 제약, 응답 모델,
+오류와 예시를 확인할 수 있습니다. 사용자 문서는 공개 포털 API를 보여줍니다.
+
+1. `관리자 로그인` → **Try it out**에서 실제 관리자 이메일·비밀번호로 실행합니다.
+2. `Origin`은 현재 Swagger 서버 출처를 사용합니다. 기본 관리자 주소는 `http://localhost:8080`입니다.
+   브라우저가 실제 Origin을 자동 설정하므로 임의의 다른 출처로 바꿀 수 없습니다.
+3. 응답의 `accessToken`을 복사하고 상단 **Authorize → bearerAuth**에 토큰 값만 입력합니다.
+   `Bearer ` 접두어는 Swagger UI가 추가합니다.
+4. `현재 관리자 조회`나 `사용자 목록 검색`을 **Try it out → Execute**로 호출합니다.
+5. `토큰 갱신`은 로그인으로 받은 HttpOnly 쿠키를 자동 전송합니다. `refreshCookie` 값은
+   Authorize에 직접 입력할 필요가 없습니다. 갱신 후 새 accessToken으로 bearerAuth를 다시 설정하세요.
+6. `로그아웃`은 현재 세션을 폐기합니다. Swagger의 Authorize 잠금 해제는 화면의 토큰만 지우며
+   서버 로그아웃을 대신하지 않습니다.
+
+쿠키 전송은 켜고 토큰의 브라우저 저장은 끕니다. 로컬 YAML의 `allowed-origins`에는
+`http://localhost:${server.port}`, `http://127.0.0.1:${server.port}`가 포함되어 있어 Swagger에서
+로그인·쿠키 갱신을 호출할 수 있습니다. 기존 로컬 파일을 사용하는 경우에도 이 두 출처를
+추가하세요. 알 수 없는 외부 Origin은 계속 거부됩니다.
+
+명세의 기준은 Controller·Record의 OpenAPI/Validation 애너테이션과 공통 OpenAPI 설정입니다.
+`docs/*.json`은 자동 생성 결과의 스냅샷으로 관리하며 직접 수정하지 않습니다. API를 변경한 뒤
+서버가 실행된 상태에서 다음 명령으로 갱신하세요.
+
+```powershell
+.\scripts\export-openapi.ps1
+# 사용자 서버 포트가 18081인 경우
+.\scripts\export-openapi.ps1 -Application user -BaseUrl http://localhost:18081
+```
+
+명세 내 서버 주소 `/`는 Swagger가 열린 현재 서버를 뜻합니다. Postman 같은 외부 클라이언트에
+명세를 가져올 때에는 실제 서버의 Base URL과 허용된 Origin 헤더를 지정하세요.
 
 ## 운영 설정
 

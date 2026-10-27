@@ -1,3 +1,8 @@
 spring:
   config:
     import: file:./config/application-local.yml
+portal:
+  docs:
+    enabled: true
+    title: Next Portal 사용자 API
+    description: 사용자 포털의 공개 API 문서입니다. 인증 없이 호출할 수 있는 기본 정보 API가 제공됩니다.

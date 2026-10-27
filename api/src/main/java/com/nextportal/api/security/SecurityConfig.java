@@ -4,12 +4,14 @@ import com.nextportal.common.member.*;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import javax.crypto.spec.SecretKeySpec;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.*;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -37,10 +39,13 @@ public class SecurityConfig {
         return decoder;
     }
 
-    @Bean SecurityFilterChain security(HttpSecurity http, SessionStore sessions, MemberRepository members) throws Exception {
+    @Bean SecurityFilterChain security(HttpSecurity http, SessionStore sessions, MemberRepository members,
+                                      @Value("${portal.docs.enabled:false}") boolean documentationEnabled) throws Exception {
         return http.csrf(csrf -> csrf.disable()) // Bearer-only APIs; refresh cookie is protected by exact Origin checks.
             .cors(Customizer.withDefaults()).sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs", "/v3/api-docs/**", "/v3/api-docs.yaml")
+                    .access((authentication, context) -> new AuthorizationDecision(documentationEnabled))
                 .requestMatchers(HttpMethod.POST, "/api/admin/auth/login", "/api/admin/auth/refresh").permitAll()
                 .requestMatchers("/actuator/health", "/api/public/**").permitAll()
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")

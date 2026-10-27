@@ -1,3 +1,7 @@
 spring:
   config:
     import: file:./config/application-local.yml
+portal:
+  docs:
+    enabled: true
+    title: Next Portal 관리자 API

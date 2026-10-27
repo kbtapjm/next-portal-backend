@@ -1,293 +1,262 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Next Portal Admin API",
-    "version": "0.1.0",
-    "description": "페이지는 0부터 시작합니다. Access JWT는 Redis 및 계정 상태를 매 요청 검증합니다. 사용자 시스템의 로그인·회원가입은 후속 범위입니다."
+    "title": "Next Portal 관리자 API",
+    "description": "로컬 개발용 API 문서입니다. 로그인 후 받은 accessToken을 Authorize의 bearerAuth에 입력하세요. Bearer 접두어 없이 토큰 값만 입력합니다. Refresh는 로그인 시 저장된 HttpOnly 쿠키를 자동으로 사용합니다. 토큰 갱신 후에는 새 accessToken으로 Authorize를 다시 설정하세요. 페이지 번호는 0부터 시작합니다.",
+    "version": "0.1.0"
   },
   "servers": [
     {
-      "url": "http://localhost:8080",
-      "description": "Spring 관리자 서버"
-    },
-    {
-      "url": "http://localhost:3000",
-      "description": "Next.js 관리자 rewrite"
+      "url": "/",
+      "description": "현재 실행 중인 서버"
     }
   ],
-  "security": [
+  "tags": [
     {
-      "bearerAuth": []
+      "name": "01. 관리자 인증",
+      "description": "관리자 로그인, 내 정보, 토큰 갱신과 로그아웃"
+    },
+    {
+      "name": "02. 사용자 관리",
+      "description": "ADMIN 권한으로 사용자와 관리자의 계정을 관리합니다."
     }
   ],
   "paths": {
-    "/api/admin/auth/login": {
-      "post": {
-        "operationId": "adminLogin",
-        "summary": "관리자 로그인",
-        "description": "활성 ADMIN 계정만 허용합니다. Access JWT를 응답하고 Refresh 토큰을 HttpOnly 쿠키로 설정합니다.",
-        "security": [],
+    "/api/admin/users/{id}": {
+      "get": {
+        "tags": [
+          "02. 사용자 관리"
+        ],
+        "summary": "사용자 조회",
+        "operationId": "getUser",
         "parameters": [
           {
-            "name": "Origin",
-            "in": "header",
+            "name": "id",
+            "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
-            },
-            "example": "http://localhost:3000",
-            "description": "ALLOWED_ORIGINS의 정확한 출처와 일치해야 합니다."
+              "type": "integer",
+              "format": "int64",
+              "exclusiveMinimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "사용자 정보",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MemberView"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "사용자를 찾을 수 없음",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "입력값 검증 실패",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "유효한 Access JWT 필요"
+          },
+          "403": {
+            "description": "관리자 권한 없음"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "02. 사용자 관리"
+        ],
+        "summary": "사용자 정보 수정",
+        "description": "이름·역할·상태를 수정합니다. 본인의 관리자 권한 해제·비활성화는 거부됩니다. 역할·상태 변경 시 해당 계정의 기존 Access·Refresh가 무효화됩니다.",
+        "operationId": "updateUser",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "exclusiveMinimum": 0
+            }
           }
         ],
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/Login"
+                "$ref": "#/components/schemas/UpdateUser"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "200": {
-            "description": "성공",
+            "description": "수정된 사용자 정보",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Token"
+                  "$ref": "#/components/schemas/MemberView"
                 }
               }
-            },
-            "headers": {
-              "Set-Cookie": {
+            }
+          },
+          "404": {
+            "description": "사용자를 찾을 수 없음",
+            "content": {
+              "application/problem+json": {
                 "schema": {
-                  "type": "string"
-                },
-                "description": "portal_admin_refresh=<opaque-token>; HttpOnly; SameSite=Strict; Path=/api/admin/auth; Max-Age=604800. HTTPS에서는 Secure 적용."
-              },
-              "Cache-Control": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "본인 권한 해제·비활성화 또는 동시 수정 충돌",
+            "content": {
+              "application/problem+json": {
                 "schema": {
-                  "type": "string",
-                  "const": "no-store"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             }
           },
           "400": {
-            "description": "요청 실패. 인증 필터의 401/403은 응답 본문이 없을 수 있습니다.",
+            "description": "입력값 검증 실패",
             "content": {
               "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Problem"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             }
           },
           "401": {
-            "description": "인증 실패/만료/폐기된 세션"
+            "description": "유효한 Access JWT 필요"
           },
           "403": {
-            "description": "관리자 권한 또는 허용된 Origin 없음"
-          },
-          "409": {
-            "description": "요청 실패. 인증 필터의 401/403은 응답 본문이 없을 수 있습니다.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
+            "description": "관리자 권한 없음"
           }
-        }
-      }
-    },
-    "/api/admin/auth/refresh": {
-      "post": {
-        "operationId": "adminRefresh",
-        "summary": "토큰 갱신",
-        "description": "쿠키의 Refresh 토큰은 단 한 번 사용 가능하며 원자적으로 교체합니다. 이전 Access JWT도 거부됩니다. 계정 역할/상태 변경 시 재로그인해야 합니다.",
+        },
         "security": [
           {
-            "refreshCookie": []
+            "bearerAuth": []
           }
-        ],
-        "parameters": [
-          {
-            "name": "Origin",
-            "in": "header",
-            "required": true,
-            "schema": {
-              "type": "string"
-            },
-            "example": "http://localhost:3000",
-            "description": "ALLOWED_ORIGINS의 정확한 출처와 일치해야 합니다."
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "성공",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Token"
-                }
-              }
-            },
-            "headers": {
-              "Set-Cookie": {
-                "schema": {
-                  "type": "string"
-                },
-                "description": "portal_admin_refresh=<opaque-token>; HttpOnly; SameSite=Strict; Path=/api/admin/auth; Max-Age=604800. HTTPS에서는 Secure 적용."
-              },
-              "Cache-Control": {
-                "schema": {
-                  "type": "string",
-                  "const": "no-store"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "요청 실패. 인증 필터의 401/403은 응답 본문이 없을 수 있습니다.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "인증 실패/만료/폐기된 세션"
-          },
-          "403": {
-            "description": "관리자 권한 또는 허용된 Origin 없음"
-          },
-          "409": {
-            "description": "요청 실패. 인증 필터의 401/403은 응답 본문이 없을 수 있습니다.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/admin/auth/logout": {
-      "post": {
-        "operationId": "adminLogout",
-        "summary": "현재 세션 폐기",
-        "responses": {
-          "204": {
-            "description": "Redis 세션 삭제 및 Refresh 쿠키 만료"
-          },
-          "401": {
-            "description": "유효한 Access 토큰 필요"
-          }
-        }
-      }
-    },
-    "/api/admin/auth/me": {
-      "get": {
-        "operationId": "adminMe",
-        "summary": "현재 관리자 조회",
-        "responses": {
-          "200": {
-            "description": "성공",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Member"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "요청 실패. 인증 필터의 401/403은 응답 본문이 없을 수 있습니다.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "인증 실패/만료/폐기된 세션"
-          },
-          "403": {
-            "description": "관리자 권한 또는 허용된 Origin 없음"
-          },
-          "409": {
-            "description": "요청 실패. 인증 필터의 401/403은 응답 본문이 없을 수 있습니다.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          }
-        }
+        ]
       }
     },
     "/api/admin/users": {
       "get": {
-        "operationId": "searchUsers",
+        "tags": [
+          "02. 사용자 관리"
+        ],
         "summary": "사용자 목록 검색",
+        "description": "이름·이메일 부분 검색, 역할·상태 필터를 지원합니다. 최신 등록순이며 페이지 번호는 0부터 시작합니다.",
+        "operationId": "searchUsers",
         "parameters": [
           {
             "name": "keyword",
             "in": "query",
+            "description": "이름 또는 이메일 검색어",
+            "required": false,
             "schema": {
               "type": "string",
-              "maxLength": 100
+              "maxLength": 100,
+              "minLength": 0
             },
-            "description": "이름·이메일의 대소문자 무관 부분 검색"
+            "example": "홍길동"
           },
           {
             "name": "role",
             "in": "query",
+            "required": false,
             "schema": {
-              "$ref": "#/components/schemas/Role"
+              "type": "string",
+              "enum": [
+                "ADMIN",
+                "USER"
+              ]
             }
           },
           {
             "name": "status",
             "in": "query",
+            "required": false,
             "schema": {
-              "$ref": "#/components/schemas/MemberStatus"
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "DISABLED"
+              ]
             }
           },
           {
             "name": "page",
             "in": "query",
+            "required": false,
             "schema": {
               "type": "integer",
-              "minimum": 0,
-              "default": 0
+              "format": "int32",
+              "default": 0,
+              "minimum": 0
             }
           },
           {
             "name": "size",
             "in": "query",
+            "required": false,
             "schema": {
               "type": "integer",
-              "minimum": 1,
+              "format": "int32",
+              "default": 20,
               "maximum": 100,
-              "default": 20
+              "minimum": 1
             }
           }
         ],
         "responses": {
+          "400": {
+            "description": "입력값 검증 실패",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "유효한 Access JWT 필요"
+          },
+          "403": {
+            "description": "관리자 권한 없음"
+          },
           "200": {
-            "description": "성공",
+            "description": "사용자 검색 결과",
             "content": {
               "application/json": {
                 "schema": {
@@ -295,82 +264,236 @@
                 }
               }
             }
-          },
-          "400": {
-            "description": "요청 실패. 인증 필터의 401/403은 응답 본문이 없을 수 있습니다.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "인증 실패/만료/폐기된 세션"
-          },
-          "403": {
-            "description": "관리자 권한 또는 허용된 Origin 없음"
-          },
-          "409": {
-            "description": "요청 실패. 인증 필터의 401/403은 응답 본문이 없을 수 있습니다.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
           }
-        }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
       },
       "post": {
+        "tags": [
+          "02. 사용자 관리"
+        ],
+        "summary": "사용자 등록",
+        "description": "USER 또는 ADMIN 계정을 생성합니다. 이메일은 공백 제거 후 소문자로 저장합니다. 비밀번호는 12자 이상, UTF-8 72바이트 이하입니다.",
         "operationId": "createUser",
-        "summary": "사용자/관리자 생성",
-        "description": "이메일은 공백 제거 후 소문자로 저장합니다. 비밀번호는 12자 이상, UTF-8 72바이트 이하입니다.",
         "requestBody": {
-          "required": true,
           "content": {
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/CreateUser"
               }
             }
-          }
+          },
+          "required": true
         },
         "responses": {
           "201": {
-            "description": "성공",
+            "description": "사용자 생성 완료",
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Member"
+                  "$ref": "#/components/schemas/MemberView"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "이미 등록된 이메일",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             }
           },
           "400": {
-            "description": "요청 실패. 인증 필터의 401/403은 응답 본문이 없을 수 있습니다.",
+            "description": "입력값 검증 실패",
             "content": {
               "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Problem"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             }
           },
           "401": {
-            "description": "인증 실패/만료/폐기된 세션"
+            "description": "유효한 Access JWT 필요"
           },
           "403": {
-            "description": "관리자 권한 또는 허용된 Origin 없음"
-          },
-          "409": {
-            "description": "요청 실패. 인증 필터의 401/403은 응답 본문이 없을 수 있습니다.",
+            "description": "관리자 권한 없음"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/auth/refresh": {
+      "post": {
+        "tags": [
+          "01. 관리자 인증"
+        ],
+        "summary": "토큰 갱신",
+        "description": "로그인으로 저장된 HttpOnly Refresh 쿠키를 자동 전송합니다. 직접 쿠키 값을 입력할 필요는 없습니다. 쿠키는 한 번만 사용 가능하며 이전 Access JWT도 거부됩니다. 응답의 새 accessToken으로 Authorize를 다시 설정하세요.",
+        "operationId": "adminRefresh",
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "description": "브라우저가 자동 설정하는 허용 출처",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "http://localhost:8080"
+          }
+        ],
+        "responses": {
+          "400": {
+            "description": "입력값 검증 실패",
             "content": {
               "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Problem"
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 정보가 올바르지 않거나 세션이 만료·폐기됨. 보안 필터 응답은 본문이 없을 수 있습니다."
+          },
+          "403": {
+            "description": "허용되지 않은 Origin 또는 관리자 권한 없음"
+          },
+          "200": {
+            "description": "Access JWT 재발급 및 Refresh 쿠키 회전",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Token"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "refreshCookie": []
+          }
+        ]
+      }
+    },
+    "/api/admin/auth/logout": {
+      "post": {
+        "tags": [
+          "01. 관리자 인증"
+        ],
+        "summary": "로그아웃",
+        "description": "현재 Redis 세션을 삭제하고 Refresh 쿠키를 만료시킵니다.",
+        "operationId": "adminLogout",
+        "responses": {
+          "400": {
+            "description": "입력값 검증 실패",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 정보가 올바르지 않거나 세션이 만료·폐기됨. 보안 필터 응답은 본문이 없을 수 있습니다."
+          },
+          "403": {
+            "description": "허용되지 않은 Origin 또는 관리자 권한 없음"
+          },
+          "204": {
+            "description": "세션 폐기 완료"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/admin/auth/login": {
+      "post": {
+        "tags": [
+          "01. 관리자 인증"
+        ],
+        "summary": "관리자 로그인",
+        "description": "활성 ADMIN 계정만 로그인할 수 있습니다. Origin은 허용 출처와 일치해야 하며 브라우저가 실제 출처로 설정합니다. Swagger에서는 현재 서버 출처를 사용하세요. Refresh 쿠키가 자동 저장되며 응답의 accessToken으로 Authorize를 설정합니다.",
+        "operationId": "adminLogin",
+        "parameters": [
+          {
+            "name": "Origin",
+            "in": "header",
+            "description": "허용된 출처. 브라우저에서는 실제 Origin이 자동 적용됩니다.",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "http://localhost:8080"
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminLogin"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "400": {
+            "description": "입력값 검증 실패",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "인증 정보가 올바르지 않거나 세션이 만료·폐기됨. 보안 필터 응답은 본문이 없을 수 있습니다."
+          },
+          "403": {
+            "description": "허용되지 않은 Origin 또는 관리자 권한 없음"
+          },
+          "200": {
+            "description": "Access JWT 발급 및 Refresh 쿠키 저장",
+            "headers": {
+              "Cache-Control": {
+                "style": "simple",
+                "schema": {
+                  "type": "string",
+                  "example": "no-store"
+                }
+              },
+              "Set-Cookie": {
+                "description": "portal_admin_refresh 쿠키. HttpOnly, SameSite=Strict, Path=/api/admin/auth",
+                "style": "simple",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Token"
                 }
               }
             }
@@ -378,233 +501,114 @@
         }
       }
     },
-    "/api/admin/users/{id}": {
-      "parameters": [
-        {
-          "name": "id",
-          "in": "path",
-          "required": true,
-          "schema": {
-            "type": "integer",
-            "format": "int64",
-            "minimum": 1
-          }
-        }
-      ],
+    "/api/admin/auth/me": {
       "get": {
-        "operationId": "getUser",
-        "summary": "사용자 조회",
+        "tags": [
+          "01. 관리자 인증"
+        ],
+        "summary": "현재 관리자 조회",
+        "operationId": "adminMe",
         "responses": {
-          "200": {
-            "description": "성공",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Member"
-                }
-              }
-            }
-          },
           "400": {
-            "description": "요청 실패. 인증 필터의 401/403은 응답 본문이 없을 수 있습니다.",
+            "description": "입력값 검증 실패",
             "content": {
               "application/problem+json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Problem"
+                  "$ref": "#/components/schemas/ProblemDetail"
                 }
               }
             }
           },
           "401": {
-            "description": "인증 실패/만료/폐기된 세션"
+            "description": "인증 정보가 올바르지 않거나 세션이 만료·폐기됨. 보안 필터 응답은 본문이 없을 수 있습니다."
           },
           "403": {
-            "description": "관리자 권한 또는 허용된 Origin 없음"
+            "description": "허용되지 않은 Origin 또는 관리자 권한 없음"
           },
-          "404": {
-            "description": "요청 실패. 인증 필터의 401/403은 응답 본문이 없을 수 있습니다.",
+          "200": {
+            "description": "현재 관리자 정보",
             "content": {
-              "application/problem+json": {
+              "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Problem"
+                  "$ref": "#/components/schemas/MemberView"
                 }
-              }
-            }
-          },
-          "409": {
-            "description": "요청 실패. 인증 필터의 401/403은 응답 본문이 없을 수 있습니다.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          }
-        }
-      },
-      "put": {
-        "operationId": "updateUser",
-        "summary": "사용자 이름·역할·상태 변경",
-        "description": "자신의 관리자 권한 해제·비활성화는 409로 거부합니다. 역할/상태 변경 시 모든 기존 토큰의 인증 버전이 무효화됩니다. 삭제 대신 비활성화합니다.",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/UpdateUser"
               }
             }
           }
         },
-        "responses": {
-          "200": {
-            "description": "성공",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Member"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "요청 실패. 인증 필터의 401/403은 응답 본문이 없을 수 있습니다.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "인증 실패/만료/폐기된 세션"
-          },
-          "403": {
-            "description": "관리자 권한 또는 허용된 Origin 없음"
-          },
-          "404": {
-            "description": "요청 실패. 인증 필터의 401/403은 응답 본문이 없을 수 있습니다.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
-          },
-          "409": {
-            "description": "요청 실패. 인증 필터의 401/403은 응답 본문이 없을 수 있습니다.",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/Problem"
-                }
-              }
-            }
+        "security": [
+          {
+            "bearerAuth": []
           }
-        }
+        ]
       }
     }
   },
   "components": {
-    "securitySchemes": {
-      "bearerAuth": {
-        "type": "http",
-        "scheme": "bearer",
-        "bearerFormat": "JWT"
-      },
-      "refreshCookie": {
-        "type": "apiKey",
-        "in": "cookie",
-        "name": "portal_admin_refresh"
-      }
-    },
     "schemas": {
-      "Role": {
-        "type": "string",
-        "enum": [
-          "ADMIN",
-          "USER"
-        ]
-      },
-      "MemberStatus": {
-        "type": "string",
-        "enum": [
-          "ACTIVE",
-          "DISABLED"
-        ]
-      },
-      "Login": {
+      "UpdateUser": {
         "type": "object",
-        "required": [
-          "email",
-          "password"
-        ],
+        "description": "사용자 이름·역할·상태 수정",
         "properties": {
-          "email": {
+          "name": {
             "type": "string",
-            "format": "email",
-            "maxLength": 254
+            "example": "홍길동",
+            "maxLength": 100,
+            "minLength": 0
           },
-          "password": {
+          "role": {
             "type": "string",
-            "minLength": 1,
-            "maxLength": 72,
-            "writeOnly": true
+            "enum": [
+              "ADMIN",
+              "USER"
+            ],
+            "example": "USER"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "DISABLED"
+            ],
+            "example": "ACTIVE"
           }
-        }
-      },
-      "Token": {
-        "type": "object",
+        },
         "required": [
-          "accessToken",
-          "tokenType",
-          "expiresIn"
-        ],
-        "properties": {
-          "accessToken": {
-            "type": "string"
-          },
-          "tokenType": {
-            "type": "string",
-            "const": "Bearer"
-          },
-          "expiresIn": {
-            "type": "integer",
-            "description": "유효기간(초)",
-            "example": 900
-          }
-        }
-      },
-      "Member": {
-        "type": "object",
-        "required": [
-          "id",
-          "email",
           "name",
           "role",
-          "status",
-          "createdAt"
-        ],
+          "status"
+        ]
+      },
+      "MemberView": {
+        "type": "object",
+        "description": "비밀번호를 포함하지 않는 사용자 정보",
         "properties": {
           "id": {
             "type": "integer",
-            "format": "int64"
+            "format": "int64",
+            "example": 1
           },
           "email": {
             "type": "string",
-            "format": "email"
+            "example": "user@example.com"
           },
           "name": {
-            "type": "string"
+            "type": "string",
+            "example": "홍길동"
           },
           "role": {
-            "$ref": "#/components/schemas/Role"
+            "type": "string",
+            "enum": [
+              "ADMIN",
+              "USER"
+            ]
           },
           "status": {
-            "$ref": "#/components/schemas/MemberStatus"
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "DISABLED"
+            ]
           },
           "createdAt": {
             "type": "string",
@@ -612,90 +616,7 @@
           }
         }
       },
-      "CreateUser": {
-        "type": "object",
-        "required": [
-          "email",
-          "name",
-          "password",
-          "role"
-        ],
-        "properties": {
-          "email": {
-            "type": "string",
-            "format": "email",
-            "maxLength": 254
-          },
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 100
-          },
-          "password": {
-            "type": "string",
-            "minLength": 12,
-            "maxLength": 72,
-            "writeOnly": true,
-            "description": "UTF-8 인코딩 길이도 72바이트 이하여야 합니다."
-          },
-          "role": {
-            "$ref": "#/components/schemas/Role"
-          }
-        }
-      },
-      "UpdateUser": {
-        "type": "object",
-        "required": [
-          "name",
-          "role",
-          "status"
-        ],
-        "properties": {
-          "name": {
-            "type": "string",
-            "minLength": 1,
-            "maxLength": 100
-          },
-          "role": {
-            "$ref": "#/components/schemas/Role"
-          },
-          "status": {
-            "$ref": "#/components/schemas/MemberStatus"
-          }
-        }
-      },
-      "MemberPage": {
-        "type": "object",
-        "required": [
-          "content",
-          "page",
-          "size",
-          "totalElements",
-          "totalPages"
-        ],
-        "properties": {
-          "content": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/Member"
-            }
-          },
-          "page": {
-            "type": "integer"
-          },
-          "size": {
-            "type": "integer"
-          },
-          "totalElements": {
-            "type": "integer",
-            "format": "int64"
-          },
-          "totalPages": {
-            "type": "integer"
-          }
-        }
-      },
-      "Problem": {
+      "ProblemDetail": {
         "type": "object",
         "properties": {
           "type": {
@@ -706,26 +627,152 @@
             "type": "string"
           },
           "status": {
-            "type": "integer"
+            "type": "integer",
+            "format": "int32"
           },
           "detail": {
             "type": "string"
           },
-          "errors": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "field": {
-                  "type": "string"
-                },
-                "message": {
-                  "type": "string"
-                }
-              }
-            }
+          "instance": {
+            "type": "string",
+            "format": "uri"
+          },
+          "properties": {
+            "type": "object",
+            "additionalProperties": {}
           }
         }
+      },
+      "CreateUser": {
+        "type": "object",
+        "description": "사용자 등록 요청",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "로그인 이메일",
+            "example": "user@example.com",
+            "maxLength": 254,
+            "minLength": 0
+          },
+          "name": {
+            "type": "string",
+            "description": "사용자 이름",
+            "example": "홍길동",
+            "maxLength": 100,
+            "minLength": 0
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "description": "12자 이상, UTF-8 기준 72바이트 이하",
+            "maxLength": 72,
+            "minLength": 12,
+            "writeOnly": true
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "ADMIN",
+              "USER"
+            ],
+            "example": "USER"
+          }
+        },
+        "required": [
+          "email",
+          "name",
+          "password",
+          "role"
+        ]
+      },
+      "Token": {
+        "type": "object",
+        "description": "Access JWT와 유효기간. Refresh 토큰은 HttpOnly 쿠키로 전달됩니다.",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "description": "Authorize에 입력할 Access JWT"
+          },
+          "tokenType": {
+            "type": "string",
+            "example": "Bearer"
+          },
+          "expiresIn": {
+            "type": "integer",
+            "format": "int64",
+            "description": "유효기간(초)",
+            "example": 900
+          }
+        }
+      },
+      "AdminLogin": {
+        "type": "object",
+        "description": "관리자 로그인 요청",
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "description": "관리자 이메일",
+            "example": "admin@portal.local",
+            "maxLength": 254,
+            "minLength": 0
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "description": "등록된 관리자 비밀번호",
+            "maxLength": 72,
+            "minLength": 0,
+            "writeOnly": true
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "MemberPage": {
+        "type": "object",
+        "description": "사용자 검색 결과. page는 0부터 시작합니다.",
+        "properties": {
+          "content": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MemberView"
+            }
+          },
+          "page": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "description": "로그인 응답의 accessToken. Bearer 접두어 없이 입력하세요.",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "refreshCookie": {
+        "type": "apiKey",
+        "description": "로그인 응답에서 브라우저에 자동 저장되는 HttpOnly 쿠키입니다. 직접 입력하지 않아도 됩니다.",
+        "name": "portal_admin_refresh",
+        "in": "cookie"
       }
     }
   }

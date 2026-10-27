@@ -27,7 +27,22 @@ management:
     health:
       show-details: never
 portal:
+  docs:
+    enabled: false
   security:
     issuer: next-portal
     access-ttl: 15m
     refresh-ttl: 7d
+springdoc:
+  api-docs:
+    enabled: ${portal.docs.enabled:false}
+  swagger-ui:
+    enabled: ${portal.docs.enabled:false}
+    path: /swagger-ui.html
+    operations-sorter: method
+    tags-sorter: alpha
+    display-request-duration: true
+    with-credentials: true
+    persist-authorization: false
+    validator-url: none
+  paths-to-match: /api/**

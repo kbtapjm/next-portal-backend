@@ -1,0 +1,74 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Next Portal 사용자 API",
+    "description": "사용자 포털의 공개 API 문서입니다. 인증 없이 호출할 수 있는 기본 정보 API가 제공됩니다.",
+    "version": "0.1.0"
+  },
+  "servers": [
+    {
+      "url": "/",
+      "description": "현재 실행 중인 서버"
+    }
+  ],
+  "tags": [
+    {
+      "name": "사용자 포털",
+      "description": "사용자용 공개 API"
+    }
+  ],
+  "paths": {
+    "/api/public/info": {
+      "get": {
+        "tags": [
+          "사용자 포털"
+        ],
+        "summary": "포털 기본 정보 조회",
+        "description": "인증 없이 호출할 수 있는 포털 소개 정보입니다.",
+        "operationId": "publicInfo",
+        "responses": {
+          "200": {
+            "description": "포털 소개 정보",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalInfo"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "PortalInfo": {
+        "type": "object",
+        "description": "포털 소개 정보",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "description": "로그인 응답의 accessToken. Bearer 접두어 없이 입력하세요.",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "refreshCookie": {
+        "type": "apiKey",
+        "description": "로그인 응답에서 브라우저에 자동 저장되는 HttpOnly 쿠키입니다. 직접 입력하지 않아도 됩니다.",
+        "name": "portal_admin_refresh",
+        "in": "cookie"
+      }
+    }
+  }
+}

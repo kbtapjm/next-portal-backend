@@ -22,7 +22,7 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest
+@SpringBootTest(properties = "portal.docs.enabled=true")
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 class AdminIntegrationTest {
@@ -74,6 +74,35 @@ class AdminIntegrationTest {
         var nextToken = token(rotated);
         mvc.perform(post("/api/admin/auth/logout").header("Authorization", "Bearer " + nextToken)).andExpect(status().isNoContent());
         mvc.perform(get("/api/admin/auth/me").header("Authorization", "Bearer " + nextToken)).andExpect(status().isUnauthorized());
+    }
+
+    @Test void swaggerDocumentsAuthenticationAndRecordSchemas() throws Exception {
+        mvc.perform(get("/swagger-ui/index.html")).andExpect(status().isOk())
+            .andExpect(content().string(org.hamcrest.Matchers.containsString("Swagger UI")));
+        mvc.perform(get("/v3/api-docs/swagger-config")).andExpect(status().isOk())
+            .andExpect(jsonPath("$.withCredentials").value(true));
+        mvc.perform(get("/v3/api-docs")).andExpect(status().isOk())
+            .andExpect(jsonPath("$.paths['/api/admin/auth/login'].post.summary").value("관리자 로그인"))
+            .andExpect(jsonPath("$.paths['/api/admin/auth/login'].post.security").doesNotExist())
+            .andExpect(jsonPath("$.paths['/api/admin/auth/refresh'].post.security[0].refreshCookie").isArray())
+            .andExpect(jsonPath("$.paths['/api/admin/users'].get.security[0].bearerAuth").isArray())
+            .andExpect(jsonPath("$.paths['/api/admin/users'].get.responses['200']").exists())
+            .andExpect(jsonPath("$.paths['/api/admin/users'].post.responses['201']").exists())
+            .andExpect(jsonPath("$.paths['/api/admin/auth/logout'].post.responses['204']").exists())
+            .andExpect(jsonPath("$.components.securitySchemes.bearerAuth.scheme").value("bearer"))
+            .andExpect(jsonPath("$.components.securitySchemes.refreshCookie.name").value("portal_admin_refresh"))
+            .andExpect(jsonPath("$.components.schemas.MemberView.properties.passwordHash").doesNotExist())
+            .andExpect(jsonPath("$.components.schemas.MemberPage.properties.content").exists())
+            .andExpect(jsonPath("$.components.schemas.CreateUser.properties.password.writeOnly").value(true));
+    }
+
+    @Test void swaggerOriginCanLoginButUntrustedOriginsStayBlocked() throws Exception {
+        mvc.perform(post("/api/admin/auth/login").header("Origin", "http://localhost:8080")
+            .contentType(MediaType.APPLICATION_JSON).content(loginBody("admin@example.com", PASSWORD)))
+            .andExpect(status().isOk());
+        mvc.perform(post("/api/admin/auth/login").header("Origin", "https://attacker.example")
+            .contentType(MediaType.APPLICATION_JSON).content(loginBody("admin@example.com", PASSWORD)))
+            .andExpect(status().isForbidden());
     }
 
     @Test void userCrudQuerydslValidationAndSelfProtection() throws Exception {
