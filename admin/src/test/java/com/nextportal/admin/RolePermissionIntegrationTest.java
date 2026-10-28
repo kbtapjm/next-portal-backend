@@ -6,9 +6,10 @@ import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MvcResult;
+
+import static org.assertj.core.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import static org.assertj.core.api.Assertions.*;
 
 class RolePermissionIntegrationTest extends AdminTestSupport {
     @Test void viewerCanReadButCannotWriteOrManageRoles() throws Exception {
@@ -162,7 +163,7 @@ class RolePermissionIntegrationTest extends AdminTestSupport {
             assertThat(List.of(requests.get(0).get(10, TimeUnit.SECONDS), requests.get(1).get(10, TimeUnit.SECONDS)))
                 .containsExactlyInAnyOrder(200, 409);
         }
-        assertThat(members.countByStatusAndRoles_Code(com.nextportal.common.member.MemberStatus.ACTIVE, "ADMIN")).isEqualTo(1);
+        assertThat(members.countByStatusAndRoles_Code(com.nextportal.common.member.entity.MemberStatus.ACTIVE, "ADMIN")).isEqualTo(1);
     }
 
     private Map<String, Object> newUser(String email, List<String> assigned) {

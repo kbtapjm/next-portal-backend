@@ -1,9 +1,12 @@
-package com.nextportal.admin.authorization;
+package com.nextportal.admin.authorization.service;
 
 import com.nextportal.api.error.PortalException;
 import com.nextportal.api.security.CurrentActor;
-import com.nextportal.common.authorization.*;
-import com.nextportal.common.member.*;
+import com.nextportal.common.authorization.entity.PortalRole;
+import com.nextportal.common.authorization.repository.RoleRepository;
+import com.nextportal.common.member.entity.Member;
+import com.nextportal.common.member.entity.MemberStatus;
+import com.nextportal.common.member.repository.MemberRepository;
 import java.util.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

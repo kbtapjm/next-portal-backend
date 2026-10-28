@@ -193,6 +193,48 @@ Record는 DTO·응답·설정에 유지합니다. 서비스·컨트롤러의 단
 사용합니다. `@Data`·`@Setter`는 `lombok.config`에서 차단합니다. Entity 생성·변경 로직은
 직접 작성하고, 변환은 Stream, 오류 분류는 패턴 매칭 switch 표현식을 사용합니다.
 
+외부 API 요청·응답 Record는 기능별 `dto` 패키지에 한 파일당 하나씩 둡니다.
+`auth/dto/AdminLoginRequest`, `auth/dto/AccessTokenResponse`,
+`member/dto/MemberCreateRequest`, `member/dto/MemberResponse`처럼 용도를 표시합니다.
+DTO 이름은 **도메인 + 작업 + Request/Response** 순서로 작성합니다.
+예를 들어 `MemberCreateRequest`, `MemberUpdateRequest`, `RoleCreateRequest`,
+`RoleUpdateRequest`, `RoleAssignRequest`를 사용합니다. 조회 결과는 `MemberResponse`,
+`MemberPageResponse`처럼 응답의 내용을 표시합니다.
+컨트롤러에는 매핑과 서비스 호출을 두고, 메서드 사이에는 빈 줄을 넣습니다.
+긴 애너테이션·매개변수·메서드 체인은 여러 줄로 정리합니다.
+서비스 내부에서만 사용하는 결과·세션 Record는 관련 클래스 안에 유지할 수 있습니다.
+
+패키지는 기능별로 묶고 그 안에서 계층을 나눕니다. 공통 Entity·Repository는 `common`에,
+관리자 기능의 Controller·Service·DTO는 `admin`에 배치합니다. Entity와 관련 enum은
+`entity`, JPA Repository와 Querydsl 조회 클래스는 `repository`에 둡니다.
+
+```text
+admin/com.nextportal.admin
+  auth/
+    controller/       AuthController
+    service/          AuthService
+    dto/              AdminLoginRequest, AccessTokenResponse
+  member/
+    controller/       MemberController
+    service/          MemberService
+    dto/              MemberCreateRequest, MemberUpdateRequest, MemberResponse, MemberPageResponse
+  authorization/
+    controller/       RoleController
+    service/          RoleService, RoleAssignments
+    dto/              RoleCreateRequest, RoleUpdateRequest, RoleAssignRequest, RoleResponse, PermissionResponse
+common/com.nextportal.common
+  member/
+    entity/           Member, MemberStatus, Role
+    repository/       MemberRepository, MemberQueries
+  authorization/
+    entity/           PortalRole, Permission
+    repository/       RoleRepository, PermissionRepository
+user/com.nextportal.user
+  portal/
+    controller/       PublicController
+    dto/              PortalInfoResponse
+```
+
 초기에는 기능별 Controller → Service → Repository 구조를 사용합니다. 외부 데이터 공급자나
 저장소 의존성이 복잡해지는 기능부터 Port/Adapter 도입을 검토합니다.
 

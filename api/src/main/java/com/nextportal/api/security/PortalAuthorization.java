@@ -1,8 +1,8 @@
 package com.nextportal.api.security;
 
-import com.nextportal.common.authorization.Permission;
-import com.nextportal.common.authorization.PortalRole;
-import com.nextportal.common.authorization.RoleRepository;
+import com.nextportal.common.authorization.entity.Permission;
+import com.nextportal.common.authorization.entity.PortalRole;
+import com.nextportal.common.authorization.repository.RoleRepository;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;

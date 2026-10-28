@@ -1,5 +1,6 @@
-package com.nextportal.common.authorization;
+package com.nextportal.common.authorization.repository;
 
+import com.nextportal.common.authorization.entity.PortalRole;
 import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;

@@ -1,9 +1,10 @@
 package com.nextportal.admin;
 
-import com.nextportal.common.member.*;
+import com.nextportal.common.member.entity.MemberStatus;
 import java.util.*;
 import org.junit.jupiter.api.*;
 import org.springframework.http.MediaType;
+
 import static org.assertj.core.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;

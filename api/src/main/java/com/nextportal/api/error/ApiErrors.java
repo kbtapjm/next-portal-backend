@@ -1,16 +1,24 @@
 package com.nextportal.api.error;
 
+import com.nextportal.api.error.dto.FieldErrorResponse;
 import jakarta.validation.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
-import org.springframework.http.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 @RestControllerAdvice
 public class ApiErrors {
-    @ExceptionHandler({PortalException.class, ConstraintViolationException.class,
-        DataIntegrityViolationException.class, OptimisticLockingFailureException.class})
+
+    @ExceptionHandler({
+        PortalException.class,
+        ConstraintViolationException.class,
+        DataIntegrityViolationException.class,
+        OptimisticLockingFailureException.class
+    })
     ProblemDetail business(RuntimeException exception) {
         return switch (exception) {
             case PortalException error -> ProblemDetail.forStatusAndDetail(error.status(), error.getMessage());
@@ -25,9 +33,9 @@ public class ApiErrors {
     ProblemDetail validation(MethodArgumentNotValidException error) {
         var detail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, "입력값을 확인해주세요.");
         detail.setProperty("errors", error.getBindingResult().getFieldErrors().stream()
-            .map(field -> new FieldError(field.getField(), field.getDefaultMessage())).toList());
+            .map(field -> new FieldErrorResponse(field.getField(), field.getDefaultMessage()))
+            .toList());
+
         return detail;
     }
-
-    record FieldError(String field, String message) { }
 }

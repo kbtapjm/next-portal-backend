@@ -1,5 +1,9 @@
-package com.nextportal.common.member;
+package com.nextportal.common.member.repository;
 
+import com.nextportal.common.member.entity.Member;
+import com.nextportal.common.member.entity.MemberStatus;
+import com.nextportal.common.member.entity.QMember;
+import com.nextportal.common.member.entity.Role;
 import com.querydsl.core.BooleanBuilder;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import jakarta.persistence.EntityManager;

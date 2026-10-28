@@ -1,8 +1,9 @@
 package com.nextportal.admin;
 
 import com.nextportal.api.security.SessionStore;
-import com.nextportal.common.authorization.RoleRepository;
-import com.nextportal.common.member.*;
+import com.nextportal.common.authorization.repository.RoleRepository;
+import com.nextportal.common.member.entity.Member;
+import com.nextportal.common.member.repository.MemberRepository;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -16,6 +17,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.*;
 import tools.jackson.databind.ObjectMapper;
+
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;

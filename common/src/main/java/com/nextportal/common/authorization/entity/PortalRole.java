@@ -1,4 +1,4 @@
-package com.nextportal.common.authorization;
+package com.nextportal.common.authorization.entity;
 
 import jakarta.persistence.*;
 import java.util.Collection;

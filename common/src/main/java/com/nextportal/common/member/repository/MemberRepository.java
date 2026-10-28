@@ -1,5 +1,7 @@
-package com.nextportal.common.member;
+package com.nextportal.common.member.repository;
 
+import com.nextportal.common.member.entity.Member;
+import com.nextportal.common.member.entity.MemberStatus;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 

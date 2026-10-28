@@ -1,6 +1,6 @@
 package com.nextportal.api.security;
 
-import com.nextportal.common.member.Member;
+import com.nextportal.common.member.entity.Member;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;

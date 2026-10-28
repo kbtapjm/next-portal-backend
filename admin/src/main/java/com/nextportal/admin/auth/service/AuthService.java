@@ -1,8 +1,10 @@
-package com.nextportal.admin.auth;
+package com.nextportal.admin.auth.service;
 
 import com.nextportal.api.error.PortalException;
 import com.nextportal.api.security.*;
-import com.nextportal.common.member.*;
+import com.nextportal.common.member.entity.Member;
+import com.nextportal.common.member.entity.MemberStatus;
+import com.nextportal.common.member.repository.MemberRepository;
 import jakarta.annotation.PostConstruct;
 import java.nio.charset.StandardCharsets;
 import java.util.*;

@@ -1,9 +1,10 @@
 package com.nextportal.admin;
 
-import com.nextportal.common.member.*;
-import com.nextportal.common.authorization.RoleRepository;
-import java.util.List;
+import com.nextportal.common.authorization.repository.RoleRepository;
+import com.nextportal.common.member.entity.Member;
+import com.nextportal.common.member.repository.MemberRepository;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;

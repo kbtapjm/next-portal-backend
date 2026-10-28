@@ -1,7 +1,7 @@
-package com.nextportal.common.member;
+package com.nextportal.common.member.entity;
 
+import com.nextportal.common.authorization.entity.PortalRole;
 import jakarta.persistence.*;
-import com.nextportal.common.authorization.PortalRole;
 import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
